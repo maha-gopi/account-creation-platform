@@ -30,6 +30,6 @@ public class Customer {
     @Column(name = "blacklist_flag", length = 1, nullable = false)
     private Character blacklistFlag; // 'Y' = Blacklisted, 'N' = Not blacklisted
     
-    @Column(name = "country_code", length = 2, nullable = false)
+    @Column(name = "country_code", length = 2, nullable = false, columnDefinition = "bpchar")
     private String countryCode;
 }
