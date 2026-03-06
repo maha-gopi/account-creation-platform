@@ -25,6 +25,7 @@ spring:
   
   flyway:
     enabled: true
+    baseline-on-migrate: true
     schemas: acct_owner
     locations: classpath:db/migration
 
