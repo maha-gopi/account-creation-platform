@@ -1,0 +1,61 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Eclipse
+.settings/
+.project
+.classpath
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# Spring Boot
+HELP.md
+.DS_Store
+
+# Sensitive files
+application-local.yml
+application-dev.yml
+application-prod.yml
+*.key
+*.pem
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+localstack-data/
+postgres-data/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# AWS credentials
+.aws/

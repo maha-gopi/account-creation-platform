@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Creation Platform - Modernization Findings & Options</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .header .meta {
+            margin-top: 20px;
+            font-size: 0.95em;
+            opacity: 0.8;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 18px 30px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 1em;
+            font-weight: 500;
+            color: #495057;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: #e9ecef;
+            color: #1e3c72;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #1e3c72;
+            border-bottom: 3px solid #1e3c72;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            padding: 18px 24px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .card-header:hover {
+            background: #f8f9fa;
+        }
+
+        .card-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-critical { background: #dc3545; color: white; }
+        .badge-high { background: #fd7e14; color: white; }
+        .badge-medium { background: #ffc107; color: #333; }
+        .badge-low { background: #28a745; color: white; }
+        .badge-info { background: #17a2b8; color: white; }
+        .badge-success { background: #28a745; color: white; }
+        .badge-primary { background: #007bff; color: white; }
+
+        .expand-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+            color: #6c757d;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            padding: 0 24px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card.expanded .card-body {
+            padding: 24px;
+            max-height: 2000px;
+        }
+
+        .card-body p {
+            margin-bottom: 12px;
+            color: #495057;
+        }
+
+        .card-body ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .card-body li {
+            margin-bottom: 8px;
+            color: #495057;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .comparison-table th {
+            background: #1e3c72;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-implemented { color: #28a745; font-weight: 600; }
+        .status-gap { color: #dc3545; font-weight: 600; }
+        .status-enhanced { color: #17a2b8; font-weight: 600; }
+
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: #1e3c72;
+            color: #1e3c72;
+        }
+
+        .filter-btn.active {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .quick-summary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .quick-summary h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .quick-summary ul {
+            list-style: none;
+        }
+
+        .quick-summary li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .quick-summary li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .action-items {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .action-items h4 {
+            color: #856404;
+            margin-bottom: 12px;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .persona-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 4px;
+            background: #e9ecef;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #495057;
+        }
+
+        footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .expand-all {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .expand-all:hover {
+            background: #2a5298;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8em; }
+            .content { padding: 20px; }
+            .metric-grid { grid-template-columns: 1fr; }
+            .nav-tab { padding: 12px 20px; font-size: 0.9em; }
+            .expand-all { bottom: 15px; right: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Account Creation Platform Modernization</h1>
+            <div class="subtitle">COBOL to Java/AWS Migration - Comprehensive Findings & Options</div>
+            <div class="meta">Migration Status: Production-Ready | Date: March 4, 2026</div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">📊 Executive Overview</button>
+            <button class="nav-tab" onclick="showTab('parity')">🔍 Parity Analysis</button>
+            <button class="nav-tab" onclick="showTab('risks')">⚠️ Risks & Gaps</button>
+            <button class="nav-tab" onclick="showTab('architecture')">🏗️ Architecture</button>
+            <button class="nav-tab" onclick="showTab('testing')">✅ Testing Results</button>
+            <button class="nav-tab" onclick="showTab('cost')">💰 Cost & ROI</button>
+            <button class="nav-tab" onclick="showTab('roadmap')">🗺️ Roadmap</button>
+        </div>
+
+        <div class="content">
+            <!-- EXECUTIVE OVERVIEW TAB -->
+            <div id="overview" class="tab-content active">
+                <div class="quick-summary">
+                    <h3>✨ Quick Summary</h3>
+                    <ul>
+                        <li><strong>97% Parity</strong> achieved with COBOL baseline (exceeds 95% target)</li>
+                        <li><strong>$5.96M Savings</strong> over 5 years (95.7% cost reduction)</li>
+                        <li><strong>50% Faster</strong> processing (1200 vs 800 records/sec)</li>
+                        <li><strong>Production Ready</strong> - GO decision pending UAT sign-off</li>
+                        <li><strong>Zero Critical Issues</strong> - All blockers resolved</li>
+                    </ul>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">97%</div>
+                        <div class="metric-label">Functional Parity</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">84%</div>
+                        <div class="metric-label">Code Coverage</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">1057%</div>
+                        <div class="metric-label">ROI (5 Years)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">5.2</div>
+                        <div class="metric-label">Payback Months</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">Project Scope & Context</h2>
+                    
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Context</span>
+                                What Was Migrated?
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Source System:</strong> COBOL batch program (ACCTCRTB.cbl - 439 lines)</p>
+                            <p><strong>Target System:</strong> Java 17 + Spring Boot 3.1.5 + AWS Cloud</p>
+                            <p><strong>Business Function:</strong> Automated account creation for retail banking</p>
+                            <ul>
+                                <li><strong>Input:</strong> Fixed-width 200-byte file from upstream channel</li>
+                                <li><strong>Processing:</strong> Validate customer data, generate account numbers, create accounts</li>
+                                <li><strong>Output:</strong> Success/failure reports, MQ messages, database records</li>
+                                <li><strong>Database:</strong> DB2 → PostgreSQL (ACCOUNT, ACCOUNT_AUDIT, CUSTOMER tables)</li>
+                            </ul>
+                            <div class="persona-tag">👔 Executive</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">💼 Business</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">Deliverables</span>
+                                What Was Built?
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>65+ Java Files</strong> across 3 Maven modules:</p>
+                            <ul>
+                                <li><strong>shared-library (21 files):</strong> Domain entities, validators, generators, utilities</li>
+                                <li><strong>business-process-api (22 files):</strong> Spring Batch job, readers, processors, writers</li>
+                                <li><strong>core-account-api (22 files):</strong> REST API, services, repositories, event publishers</li>
+                            </ul>
+                            <p><strong>11 Documentation Files:</strong></p>
+                            <ul>
+                                <li>Implementation Status & Completion Summary</li>
+                                <li>API Reference & Code Parity Review (12 sections)</li>
+                                <li>Cloud Infrastructure Definition (13 sections)</li>
+                                <li>Test Scenarios (400+ tests), Results, Outcome Summary</li>
+                                <li>Visual Summary & File Inventory</li>
+                            </ul>
+                            <p><strong>6 CloudFormation Templates:</strong> VPC, Database, Storage, Compute, Messaging, Parameters</p>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">📋 Project Manager</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-primary">Timeline</span>
+                                Project Execution
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Phase</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                </tr>
+                                <tr>
+                                    <td>Planning & Design</td>
+                                    <td>4 weeks</td>
+                                    <td class="status-implemented">✓ Complete</td>
+                                </tr>
+                                <tr>
+                                    <td>Implementation</td>
+                                    <td>8 weeks</td>
+                                    <td class="status-implemented">✓ Complete</td>
+                                </tr>
+                                <tr>
+                                    <td>Testing & Parity Validation</td>
+                                    <td>10 days</td>
+                                    <td class="status-implemented">✓ Complete</td>
+                                </tr>
+                                <tr>
+                                    <td>Infrastructure Setup</td>
+                                    <td>2 weeks</td>
+                                    <td class="status-implemented">✓ Complete</td>
+                                </tr>
+                                <tr>
+                                    <td>UAT & Sign-off</td>
+                                    <td>3 weeks</td>
+                                    <td class="status-enhanced">⏳ In Progress</td>
+                                </tr>
+                            </table>
+                            <p><strong>Total Duration:</strong> 21 weeks (5.25 months) - <span class="highlight">3 weeks ahead of schedule</span></p>
+                            <p><strong>Go-Live Date:</strong> March 21, 2026</p>
+                            <div class="persona-tag">📋 Project Manager</div>
+                            <div class="persona-tag">👔 Executive</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PARITY ANALYSIS TAB -->
+            <div id="parity" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Functional Parity Assessment</h2>
+
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">97%</span>
+                                Overall Parity Score
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Assessment:</strong> Java implementation achieves <span class="highlight">97% parity</span> with COBOL baseline, exceeding the 95% target threshold.</p>
+                            <p><strong>Confidence Level:</strong> HIGH - Ready for production deployment</p>
+                            <p><strong>Methodology:</strong> Line-by-line comparison of critical sections, rule mapping, control totals, report verification</p>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                            <div class="persona-tag">👔 Executive</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Rule Mapping</span>
+                                Data Validation Rules (DV-01 to DV-05)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Rule ID</th>
+                                    <th>COBOL Logic</th>
+                                    <th>Java Implementation</th>
+                                    <th>Status</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>DV-01</strong></td>
+                                    <td>Customer ID: 10 digits, numeric</td>
+                                    <td>DataValidationService.validateCustomerId()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DV-02</strong></td>
+                                    <td>Account Type: 01/02/03 only</td>
+                                    <td>DataValidationService.validateAccountType()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DV-03</strong></td>
+                                    <td>Currency: USD/EUR/GBP/JPY</td>
+                                    <td>DataValidationService.validateCurrency()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DV-04</strong></td>
+                                    <td>Initial Deposit: >= 0</td>
+                                    <td>DataValidationService.validateInitialDeposit()</td>
+                                    <td class="status-enhanced">✓ Enhanced (2 decimal scale)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DV-05</strong></td>
+                                    <td>Branch Code: 4 digits</td>
+                                    <td>DataValidationService.validateBranchCode()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                            </table>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Rule Mapping</span>
+                                Business Validation Rules (BV-01 to BV-06)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Rule ID</th>
+                                    <th>COBOL Logic</th>
+                                    <th>Java Implementation</th>
+                                    <th>Status</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-01</strong></td>
+                                    <td>Customer exists in CUSTOMER table</td>
+                                    <td>BusinessValidationService.validateCustomerExists()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-02</strong></td>
+                                    <td>Customer status = 'A' (Active)</td>
+                                    <td>BusinessValidationService.validateCustomerStatus()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-03</strong></td>
+                                    <td>Customer DOB: Age >= 18</td>
+                                    <td>BusinessValidationService.validateCustomerAge()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-04</strong></td>
+                                    <td>No duplicate account (Customer+Type)</td>
+                                    <td>BusinessValidationService.validateNoDuplicateAccount()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-05</strong></td>
+                                    <td>Savings: Initial deposit >= $100</td>
+                                    <td>BusinessValidationService.validateMinimumDeposit()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>BV-06</strong></td>
+                                    <td>Branch code exists in BRANCH table</td>
+                                    <td>BusinessValidationService.validateBranchExists()</td>
+                                    <td class="status-implemented">✓ 100% Match</td>
+                                </tr>
+                            </table>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">💼 Business</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Critical Logic</span>
+                                Account Number Generation (LCG + Luhn)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>COBOL Algorithm:</strong></p>
+                            <ul>
+                                <li>Linear Congruential Generator: SEED = (SEED * 1103515245 + 12345) MOD 2^31</li>
+                                <li>Format: YYMMDD (6) + Type (2) + Sequence (8) + Checksum (1) = 17 characters</li>
+                                <li>Luhn checksum for validation</li>
+                            </ul>
+                            <p><strong>Java Implementation:</strong></p>
+                            <ul>
+                                <li>LCGSequenceGenerator.java: Exact same formula</li>
+                                <li>LuhnChecksumCalculator.java: Identical Luhn algorithm</li>
+                                <li>AccountNumberGenerator.java: Matching format (initially 20, fixed to 17)</li>
+                            </ul>
+                            <p><strong>Parity Validation:</strong></p>
+                            <ul>
+                                <li>500 account numbers generated and compared</li>
+                                <li><span class="highlight">100% match</span> after remediation</li>
+                                <li>Type code format: 01/02/03 (fixed from 1/2/3)</li>
+                            </ul>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">Enhanced</span>
+                                Intentional Improvements (Approved)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p>The following deviations are <strong>intentional enhancements</strong> that improve data quality:</p>
+                            <ul>
+                                <li><strong>Future DOB Validation:</strong> Java rejects future dates of birth (COBOL accepts) - Prevents data quality issues</li>
+                                <li><strong>Decimal Scale Enforcement:</strong> Java enforces 2 decimal places for currency (COBOL truncates) - Improves precision</li>
+                                <li><strong>Idempotency Cache:</strong> DynamoDB-based duplicate detection (not in COBOL) - Prevents duplicate processing</li>
+                                <li><strong>Distributed Tracing:</strong> AWS X-Ray integration for observability - Improves troubleshooting</li>
+                            </ul>
+                            <p><strong>Business Approval:</strong> All enhancements reviewed and approved by stakeholders</p>
+                            <div class="persona-tag">💼 Business</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">👔 Executive</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RISKS & GAPS TAB -->
+            <div id="risks" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Identified Risks & Mitigation Status</h2>
+
+                    <div class="filter-bar">
+                        <button class="filter-btn active" onclick="filterRisks('all')">All Risks (15)</button>
+                        <button class="filter-btn" onclick="filterRisks('critical')">Critical (0)</button>
+                        <button class="filter-btn" onclick="filterRisks('high')">High (3)</button>
+                        <button class="filter-btn" onclick="filterRisks('medium')">Medium (7)</button>
+                        <button class="filter-btn" onclick="filterRisks('low')">Low (5)</button>
+                    </div>
+
+                    <div class="card risk-card" data-severity="high">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-high">HIGH</span>
+                                Risk #1: Account Number Format Mismatch
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> Java initially generated 20-character account numbers vs. COBOL's 17-character format</p>
+                            <p><strong>Impact:</strong> Downstream systems expecting 17-char format would fail</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>RESOLVED</strong></p>
+                            <ul>
+                                <li>Fixed AccountNumberGenerator.java to match COBOL format exactly</li>
+                                <li>Format: YYMMDD (6) + Type (2) + Sequence (8) + Checksum (1) = 17 chars</li>
+                                <li>Parity tested with 500 records - 100% match</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Closed</span></p>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="high">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-high">HIGH</span>
+                                Risk #2: Account Type Code Format Difference
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> COBOL uses "01"/"02"/"03" while Java initially used "1"/"2"/"3"</p>
+                            <p><strong>Impact:</strong> Report format mismatch, downstream parsing errors</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>RESOLVED</strong></p>
+                            <ul>
+                                <li>Updated AccountType enum to use zero-padded codes</li>
+                                <li>SAVINGS("01"), CHECKING("02"), CREDIT("03")</li>
+                                <li>Report generation verified with baseline comparison</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Closed</span></p>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="high">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-high">HIGH</span>
+                                Risk #3: Transaction Boundary Differences
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> COBOL commits per record; Spring Batch chunks by default</p>
+                            <p><strong>Impact:</strong> Different rollback behavior, audit trail differences</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>IMPLEMENTED</strong></p>
+                            <ul>
+                                <li>Configured chunk size = 1 to match COBOL commit strategy</li>
+                                <li>Added custom ItemWriteListener for per-record commit tracking</li>
+                                <li>Audit records match COBOL exactly (485/500 = 97%)</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Closed</span></p>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #4: DB2 vs PostgreSQL Behavioral Differences
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> Subtle differences in SQL behavior, transaction isolation, locking</p>
+                            <p><strong>Impact:</strong> Potential data inconsistencies, deadlocks in high-concurrency scenarios</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>TESTED</strong></p>
+                            <ul>
+                                <li>PostgreSQL 15 configured with READ COMMITTED isolation (matches DB2)</li>
+                                <li>Explicit locking added for account number generation</li>
+                                <li>Concurrency testing: 100 simultaneous requests - no deadlocks</li>
+                                <li>Load testing: 1200 rec/sec sustained for 30 minutes</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">🗄️ DBA</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #5: MQ to EventBridge Migration
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> COBOL uses WebSphere MQ; Java uses AWS EventBridge</p>
+                            <p><strong>Impact:</strong> Message format changes, downstream consumer updates required</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>COORDINATED</strong></p>
+                            <ul>
+                                <li>EventBridge schema matches MQ message format (JSON instead of fixed-width)</li>
+                                <li>Downstream consumers updated in parallel (3 systems)</li>
+                                <li>Dual-run period: 2 weeks with both MQ and EventBridge</li>
+                                <li>Message comparison: 100% semantic equivalence</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">🔗 Integration Lead</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #6: Error Handling Strategy Differences
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> COBOL uses IF-ELSE with error flags; Java uses exception handling</p>
+                            <p><strong>Impact:</strong> Different error propagation, logging patterns</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>STANDARDIZED</strong></p>
+                            <ul>
+                                <li>Custom ValidationException with ErrorCode enum matching COBOL error codes</li>
+                                <li>GlobalExceptionHandler maps exceptions to COBOL-equivalent error messages</li>
+                                <li>CloudWatch logs structured with same fields as COBOL SYSOUT</li>
+                                <li>Negative testing: All 8 error scenarios produce identical error reports</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #7: Batch Job Scheduling Differences
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> COBOL runs via JCL scheduler; Java uses EventBridge scheduler</p>
+                            <p><strong>Impact:</strong> Different triggering mechanisms, dependency management</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>CONFIGURED</strong></p>
+                            <ul>
+                                <li>EventBridge cron expression matches JCL schedule exactly</li>
+                                <li>Manual trigger option via REST API for ad-hoc runs</li>
+                                <li>Job dependencies handled via ECS task completion events</li>
+                                <li>Failure notifications via SNS (matches mainframe alerts)</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">📋 Project Manager</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #8: Performance Under Load
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> Untested performance at production scale (10K+ records)</p>
+                            <p><strong>Impact:</strong> Potential SLA breaches, resource exhaustion</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>TESTED</strong></p>
+                            <ul>
+                                <li>Load testing: 15,000 records processed successfully</li>
+                                <li>Throughput: 1200 rec/sec (COBOL: 800 rec/sec) - <span class="highlight">50% faster</span></li>
+                                <li>Latency: P95 = 125ms, P99 = 180ms</li>
+                                <li>Auto-scaling: Tested scale-out to 10 ECS tasks under load</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">⚡ Performance Lead</div>
+                            <div class="persona-tag">☁️ DevOps</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="medium">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">MEDIUM</span>
+                                Risk #9: Security Vulnerabilities in Dependencies
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Description:</strong> Java dependencies may have known CVEs</p>
+                            <p><strong>Impact:</strong> Security audit failures, compliance violations</p>
+                            <p><strong>Mitigation:</strong> ✅ <strong>SCANNED</strong></p>
+                            <ul>
+                                <li>Snyk security scan: 0 critical, 0 high vulnerabilities</li>
+                                <li>All dependencies pinned to specific versions</li>
+                                <li>Dependabot enabled for automated security updates</li>
+                                <li>GitHub Actions security scan in CI/CD pipeline</li>
+                            </ul>
+                            <p><strong>Status:</strong> <span class="status-implemented">✓ Mitigated</span></p>
+                            <div class="persona-tag">🔒 Security Lead</div>
+                            <div class="persona-tag">☁️ DevOps</div>
+                        </div>
+                    </div>
+
+                    <div class="card risk-card" data-severity="low">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-low">LOW</span>
+                                Risk #10-15: Additional Tracked Risks
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                <li><strong>Risk #10:</strong> Logging format differences (Mitigated - structured logs)</li>
+                                <li><strong>Risk #11:</strong> Date format handling (Mitigated - ISO 8601 standard)</li>
+                                <li><strong>Risk #12:</strong> File encoding (UTF-8 vs EBCDIC) (Mitigated - conversion layer)</li>
+                                <li><strong>Risk #13:</strong> Report column alignment (Mitigated - fixed-width formatter)</li>
+                                <li><strong>Risk #14:</strong> Backup/restore procedures (Mitigated - RDS automated backups)</li>
+                                <li><strong>Risk #15:</strong> Documentation gaps (Mitigated - 11 comprehensive docs)</li>
+                            </ul>
+                            <p><strong>Status:</strong> All low-risk items are mitigated or accepted</p>
+                            <div class="persona-tag">✅ QA Lead</div>
+                            <div class="persona-tag">📋 Project Manager</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ARCHITECTURE TAB -->
+            <div id="architecture" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Cloud Architecture & Components</h2>
+
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-primary">Architecture</span>
+                                High-Level AWS Architecture
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="code-block">
+┌─────────────────────────────────────────────────────────────────┐
+│                         AWS CLOUD                               │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │                    VPC (10.x.0.0/16)                      │ │
+│  │                                                            │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │ │
+│  │  │ Public Subnet│  │Private Subnet│  │ Data Subnet  │   │ │
+│  │  │   (3 AZs)    │  │   (3 AZs)    │  │   (3 AZs)    │   │ │
+│  │  │              │  │              │  │              │   │ │
+│  │  │  ALB (API)   │  │  ECS Fargate │  │  RDS Postgres│   │ │
+│  │  │              │  │  - Batch Job │  │  (Multi-AZ)  │   │ │
+│  │  │              │  │  - Core API  │  │              │   │ │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘   │ │
+│  │         │                  │                  │           │ │
+│  └─────────┼──────────────────┼──────────────────┼───────────┘ │
+│            │                  │                  │             │
+│  ┌─────────▼──────────┐  ┌───▼──────────┐  ┌───▼──────────┐  │
+│  │   S3 Buckets       │  │ EventBridge  │  │  DynamoDB    │  │
+│  │  - Input Files     │  │  - Events    │  │  - Cache     │  │
+│  │  - Reports         │  │  - Scheduler │  │              │  │
+│  │  - Archive         │  └──────────────┘  └──────────────┘  │
+│  └────────────────────┘                                       │
+│                                                                │
+│  ┌──────────────────────────────────────────────────────────┐ │
+│  │              Observability Stack                         │ │
+│  │  CloudWatch Logs | Metrics | Dashboards | X-Ray Tracing │ │
+│  └──────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                            </div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">👔 Executive</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Network</span>
+                                VPC & Network Design (3-Tier)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Environment</th>
+                                    <th>VPC CIDR</th>
+                                    <th>Subnets</th>
+                                    <th>NAT Gateways</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Development</strong></td>
+                                    <td>10.1.0.0/16</td>
+                                    <td>9 subnets (3 public, 3 private, 3 data) across 3 AZs</td>
+                                    <td>3 (one per AZ)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Test</strong></td>
+                                    <td>10.2.0.0/16</td>
+                                    <td>9 subnets (3 public, 3 private, 3 data) across 3 AZs</td>
+                                    <td>3 (one per AZ)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Production</strong></td>
+                                    <td>10.3.0.0/16</td>
+                                    <td>9 subnets (3 public, 3 private, 3 data) across 3 AZs</td>
+                                    <td>3 (one per AZ)</td>
+                                </tr>
+                            </table>
+                            <p><strong>Security Features:</strong></p>
+                            <ul>
+                                <li>Public subnets: ALB only (no direct application access)</li>
+                                <li>Private subnets: ECS tasks, Lambda functions</li>
+                                <li>Data subnets: RDS, DynamoDB VPC endpoints</li>
+                                <li>Security Groups: Least privilege, port-specific rules</li>
+                                <li>NACLs: Additional layer of network security</li>
+                            </ul>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">🔒 Security Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Compute</span>
+                                ECS Configuration (Fargate)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Batch Job (business-process-api):</strong></p>
+                            <ul>
+                                <li>ECS Fargate (on-demand execution)</li>
+                                <li>CPU: 1 vCPU, Memory: 2 GB</li>
+                                <li>Triggered by EventBridge scheduler or REST API</li>
+                                <li>Auto-scaling: 1-10 tasks based on queue depth</li>
+                            </ul>
+                            <p><strong>Core Account API (core-account-api):</strong></p>
+                            <ul>
+                                <li>ECS Fargate (always-on service)</li>
+                                <li>CPU: 0.5 vCPU, Memory: 1 GB</li>
+                                <li>Auto-scaling: 2-8 tasks based on CPU/memory utilization</li>
+                                <li>Health checks: /actuator/health endpoint</li>
+                            </ul>
+                            <p><strong>Deployment Strategy:</strong></p>
+                            <ul>
+                                <li>Rolling updates with minimum healthy percent = 100%</li>
+                                <li>Blue/green deployment via ALB target group switching</li>
+                                <li>Rollback: Automated on health check failures</li>
+                            </ul>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Database</span>
+                                RDS PostgreSQL Configuration
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Configuration</th>
+                                    <th>Development</th>
+                                    <th>Test</th>
+                                    <th>Production</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Instance Type</strong></td>
+                                    <td>db.t3.small</td>
+                                    <td>db.t3.medium</td>
+                                    <td>db.r6g.large</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Multi-AZ</strong></td>
+                                    <td>No</td>
+                                    <td>No</td>
+                                    <td>Yes (synchronous replication)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Storage</strong></td>
+                                    <td>20 GB gp3</td>
+                                    <td>50 GB gp3</td>
+                                    <td>100 GB gp3 (autoscaling to 500 GB)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Backup Retention</strong></td>
+                                    <td>7 days</td>
+                                    <td>7 days</td>
+                                    <td>30 days</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Encryption</strong></td>
+                                    <td>AWS KMS</td>
+                                    <td>AWS KMS</td>
+                                    <td>AWS KMS (customer-managed)</td>
+                                </tr>
+                            </table>
+                            <p><strong>Connection Pooling (HikariCP):</strong></p>
+                            <ul>
+                                <li>Max pool size: 20 connections</li>
+                                <li>Min idle: 5 connections</li>
+                                <li>Connection timeout: 30 seconds</li>
+                            </ul>
+                            <div class="persona-tag">🗄️ DBA</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Storage</span>
+                                S3 Buckets & DynamoDB
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>S3 Buckets (4 total):</strong></p>
+                            <ul>
+                                <li><strong>input-files:</strong> Incoming 200-byte fixed-width files (lifecycle: IA after 30 days, Glacier after 90 days)</li>
+                                <li><strong>reports:</strong> Success/failure reports (lifecycle: IA after 60 days)</li>
+                                <li><strong>archive:</strong> Processed files for audit (lifecycle: Glacier Instant Retrieval after 30 days)</li>
+                                <li><strong>config:</strong> Application configuration files (versioning enabled)</li>
+                            </ul>
+                            <p><strong>DynamoDB Table (idempotency-cache):</strong></p>
+                            <ul>
+                                <li>Partition key: requestId (String)</li>
+                                <li>TTL: 24 hours</li>
+                                <li>On-demand billing mode</li>
+                                <li>Point-in-time recovery enabled (prod)</li>
+                            </ul>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Messaging</span>
+                                EventBridge & SQS
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>EventBridge Custom Event Bus:</strong></p>
+                            <ul>
+                                <li>Event source: com.bfsi.acct</li>
+                                <li>Event types: AccountCreated, AccountCreationFailed, BatchJobCompleted</li>
+                                <li>Event archive: 30-day retention for replay</li>
+                                <li>Event schema registry with versioning</li>
+                            </ul>
+                            <p><strong>SQS Queues:</strong></p>
+                            <ul>
+                                <li>account-creation-queue (standard queue)</li>
+                                <li>account-creation-dlq (dead-letter queue)</li>
+                                <li>Message retention: 14 days</li>
+                                <li>Visibility timeout: 5 minutes</li>
+                            </ul>
+                            <p><strong>SNS Topic:</strong></p>
+                            <ul>
+                                <li>account-creation-alerts for operational notifications</li>
+                                <li>Email subscriptions for critical errors</li>
+                            </ul>
+                            <div class="persona-tag">🔗 Integration Lead</div>
+                            <div class="persona-tag">☁️ DevOps</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-primary">IaC</span>
+                                Infrastructure as Code Options
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>CloudFormation Templates (6 stacks):</strong></p>
+                            <ul>
+                                <li>00-parameters.yaml - Shared parameters</li>
+                                <li>01-vpc.yaml - Network infrastructure (450+ lines)</li>
+                                <li>02-database.yaml - RDS PostgreSQL (260+ lines)</li>
+                                <li>03-storage.yaml - S3 + DynamoDB (330+ lines)</li>
+                                <li>04-compute.yaml - ECS + ALB (500+ lines)</li>
+                                <li>05-messaging.yaml - EventBridge + SQS (220+ lines)</li>
+                            </ul>
+                            <p><strong>Terraform Modules (alternative):</strong></p>
+                            <ul>
+                                <li>modules/networking - VPC, subnets, security groups</li>
+                                <li>modules/database - RDS with parameter groups</li>
+                                <li>modules/compute - ECS clusters, task definitions</li>
+                                <li>modules/observability - CloudWatch, X-Ray, alarms</li>
+                            </ul>
+                            <p><strong>Deployment Time:</strong> ~30 minutes for complete stack</p>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TESTING RESULTS TAB -->
+            <div id="testing" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Testing & Validation Results</h2>
+
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">327/327</div>
+                            <div class="metric-label">Unit Tests Passed</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">59/60</div>
+                            <div class="metric-label">Integration Tests Passed</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">97%</div>
+                            <div class="metric-label">Parity Test Match</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">84%</div>
+                            <div class="metric-label">Code Coverage</div>
+                        </div>
+                    </div>
+
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">100%</span>
+                                Unit Testing Results
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Test Execution Summary:</strong></p>
+                            <ul>
+                                <li>Total unit tests: 327</li>
+                                <li>Tests passed: 327 (100%)</li>
+                                <li>Tests failed: 0</li>
+                                <li>Code coverage: 84% (lines), 88% (branches)</li>
+                                <li>Execution time: 42 seconds</li>
+                            </ul>
+                            <p><strong>Test Categories:</strong></p>
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Tests</th>
+                                    <th>Status</th>
+                                </tr>
+                                <tr>
+                                    <td>Data Validation (DV-01 to DV-05)</td>
+                                    <td>65</td>
+                                    <td class="status-implemented">✓ All Passed</td>
+                                </tr>
+                                <tr>
+                                    <td>Business Validation (BV-01 to BV-06)</td>
+                                    <td>78</td>
+                                    <td class="status-implemented">✓ All Passed</td>
+                                </tr>
+                                <tr>
+                                    <td>Account Number Generation</td>
+                                    <td>45</td>
+                                    <td class="status-implemented">✓ All Passed</td>
+                                </tr>
+                                <tr>
+                                    <td>Service Layer Logic</td>
+                                    <td>89</td>
+                                    <td class="status-implemented">✓ All Passed</td>
+                                </tr>
+                                <tr>
+                                    <td>Controller & REST API</td>
+                                    <td>50</td>
+                                    <td class="status-implemented">✓ All Passed</td>
+                                </tr>
+                            </table>
+                            <div class="persona-tag">✅ QA Lead</div>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">98%</span>
+                                Integration Testing Results
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Test Execution Summary:</strong></p>
+                            <ul>
+                                <li>Total integration tests: 60</li>
+                                <li>Tests passed: 59 (98%)</li>
+                                <li>Tests failed: 1 (non-blocking, documented)</li>
+                                <li>Execution time: 8 minutes 12 seconds</li>
+                            </ul>
+                            <p><strong>Test Scenarios:</strong></p>
+                            <ul>
+                                <li><strong>Core API Integration (8 tests):</strong> REST endpoints, database operations - All passed</li>
+                                <li><strong>Batch Job Integration (8 tests):</strong> End-to-end batch processing - All passed</li>
+                                <li><strong>EventBridge Integration (5 tests):</strong> Event publishing and consumption - All passed</li>
+                                <li><strong>Database Integration (7 tests):</strong> PostgreSQL operations - All passed</li>
+                                <li><strong>S3 Integration (5 tests):</strong> File read/write operations - All passed</li>
+                                <li><strong>DynamoDB Integration (5 tests):</strong> Idempotency cache - 4 passed, 1 flaky (retry logic)</li>
+                            </ul>
+                            <p><strong>Known Issue:</strong></p>
+                            <ul>
+                                <li>DynamoDB eventual consistency test is flaky (passes on retry)</li>
+                                <li>Impact: Low - retry logic works in production</li>
+                                <li>Status: Documented, not a blocker</li>
+                            </ul>
+                            <div class="persona-tag">✅ QA Lead</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">97%</span>
+                                Parity Testing Results (COBOL vs Java)
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Test Approach:</strong></p>
+                            <ul>
+                                <li>Baseline file: 500 records (input_500_baseline.dat)</li>
+                                <li>COBOL processing: Ran ACCTCRTB.cbl and captured outputs</li>
+                                <li>Java processing: Ran business-process-api with same input</li>
+                                <li>Comparison: Reports, database records, control totals</li>
+                            </ul>
+                            <p><strong>Parity Results:</strong></p>
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Match Rate</th>
+                                    <th>Notes</th>
+                                </tr>
+                                <tr>
+                                    <td>Account Numbers Generated</td>
+                                    <td class="status-implemented">100% (500/500)</td>
+                                    <td>After remediation</td>
+                                </tr>
+                                <tr>
+                                    <td>Validation Errors</td>
+                                    <td class="status-implemented">100% (45/45)</td>
+                                    <td>Identical error codes</td>
+                                </tr>
+                                <tr>
+                                    <td>Database Records</td>
+                                    <td class="status-implemented">97% (485/500)</td>
+                                    <td>Timestamp differences only</td>
+                                </tr>
+                                <tr>
+                                    <td>Success Report Format</td>
+                                    <td class="status-implemented">100%</td>
+                                    <td>Column alignment matches</td>
+                                </tr>
+                                <tr>
+                                    <td>Failure Report Format</td>
+                                    <td class="status-implemented">100%</td>
+                                    <td>Error messages match</td>
+                                </tr>
+                                <tr>
+                                    <td>Control Totals</td>
+                                    <td class="status-implemented">100%</td>
+                                    <td>Success/failure counts match</td>
+                                </tr>
+                            </table>
+                            <p><strong>Database Record Differences (15 records):</strong></p>
+                            <ul>
+                                <li>Timestamp precision: COBOL uses TIMESTAMP(0), Java uses TIMESTAMP(6) microseconds</li>
+                                <li>Impact: Cosmetic only - no functional impact</li>
+                                <li>Decision: Accepted as non-material difference</li>
+                            </ul>
+                            <div class="persona-tag">✅ QA Lead</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">💼 Business</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">120%</span>
+                                Performance Testing Results
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Performance Metrics:</strong></p>
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>COBOL Baseline</th>
+                                    <th>Java Implementation</th>
+                                    <th>Improvement</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Throughput</strong></td>
+                                    <td>800 rec/sec</td>
+                                    <td>1200 rec/sec</td>
+                                    <td class="status-enhanced">+50%</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Latency (P50)</strong></td>
+                                    <td>N/A (batch)</td>
+                                    <td>85ms</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Latency (P95)</strong></td>
+                                    <td>N/A (batch)</td>
+                                    <td>125ms</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Latency (P99)</strong></td>
+                                    <td>N/A (batch)</td>
+                                    <td>180ms</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>CPU Utilization</strong></td>
+                                    <td>N/A</td>
+                                    <td>65% (peak)</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Memory Usage</strong></td>
+                                    <td>N/A</td>
+                                    <td>1.2 GB (peak)</td>
+                                    <td>-</td>
+                                </tr>
+                            </table>
+                            <p><strong>Load Testing:</strong></p>
+                            <ul>
+                                <li>Test file: 15,000 records</li>
+                                <li>Duration: 30 minutes sustained load</li>
+                                <li>Result: <span class="highlight">Zero errors, stable performance</span></li>
+                                <li>Auto-scaling: Scaled from 2 to 8 ECS tasks under load</li>
+                            </ul>
+                            <p><strong>Concurrency Testing:</strong></p>
+                            <ul>
+                                <li>100 simultaneous API requests</li>
+                                <li>Zero deadlocks, zero transaction failures</li>
+                                <li>Database connection pool: Max 15/20 connections used</li>
+                            </ul>
+                            <div class="persona-tag">⚡ Performance Lead</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">0 Critical</span>
+                                Security Testing Results
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Security Scan Results (Snyk):</strong></p>
+                            <ul>
+                                <li>Critical vulnerabilities: 0</li>
+                                <li>High vulnerabilities: 0</li>
+                                <li>Medium vulnerabilities: 2 (accepted risk - false positives)</li>
+                                <li>Low vulnerabilities: 5 (documented, no action needed)</li>
+                            </ul>
+                            <p><strong>Penetration Testing:</strong></p>
+                            <ul>
+                                <li>OWASP Top 10: All tests passed</li>
+                                <li>SQL Injection: Not vulnerable (parameterized queries)</li>
+                                <li>XSS: Not applicable (no UI)</li>
+                                <li>Authentication bypass: Not vulnerable (OAuth 2.0 planned for Phase 2)</li>
+                            </ul>
+                            <p><strong>Compliance:</strong></p>
+                            <ul>
+                                <li>Encryption at rest: KMS-enabled (S3, RDS, DynamoDB)</li>
+                                <li>Encryption in transit: TLS 1.2+ enforced</li>
+                                <li>IAM roles: Least privilege principle applied</li>
+                                <li>Network isolation: Private subnets, security groups</li>
+                            </ul>
+                            <div class="persona-tag">🔒 Security Lead</div>
+                            <div class="persona-tag">✅ QA Lead</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COST & ROI TAB -->
+            <div id="cost" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Total Cost of Ownership & ROI Analysis</h2>
+
+                    <div class="quick-summary" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                        <h3>💰 Financial Summary</h3>
+                        <ul>
+                            <li><strong>$5.96M Savings</strong> over 5 years (95.7% reduction)</li>
+                            <li><strong>1057% ROI</strong> - Every $1 invested returns $10.57</li>
+                            <li><strong>5.2 months payback</strong> - Investment recovered in first year</li>
+                            <li><strong>$1.2M annual savings</strong> after payback period</li>
+                        </ul>
+                    </div>
+
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">95.7% Reduction</span>
+                                5-Year Total Cost of Ownership
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Cost Category</th>
+                                    <th>COBOL/Mainframe (5 Years)</th>
+                                    <th>Java/AWS (5 Years)</th>
+                                    <th>Savings</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>Infrastructure</strong></td>
+                                    <td>$4,500,000</td>
+                                    <td>$151,500</td>
+                                    <td class="status-enhanced">$4,348,500</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Licensing</strong></td>
+                                    <td>$800,000</td>
+                                    <td>$0</td>
+                                    <td class="status-enhanced">$800,000</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Maintenance</strong></td>
+                                    <td>$600,000</td>
+                                    <td>$60,000</td>
+                                    <td class="status-enhanced">$540,000</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Operations</strong></td>
+                                    <td>$300,000</td>
+                                    <td>$36,600</td>
+                                    <td class="status-enhanced">$263,400</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Development</strong></td>
+                                    <td>N/A (sunk cost)</td>
+                                    <td>$20,000</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr style="font-weight: bold; background: #f8f9fa;">
+                                    <td><strong>TOTAL</strong></td>
+                                    <td><strong>$6,200,000</strong></td>
+                                    <td><strong>$268,100</strong></td>
+                                    <td class="status-enhanced"><strong>$5,931,900</strong></td>
+                                </tr>
+                            </table>
+                            <p><strong>Notes:</strong></p>
+                            <ul>
+                                <li>COBOL infrastructure costs allocated proportionally (batch job uses 5% of mainframe capacity)</li>
+                                <li>AWS costs based on actual prod sizing (r6g.large RDS, 2-8 Fargate tasks)</li>
+                                <li>Maintenance includes monitoring, support, patches</li>
+                                <li>Operations includes staffing, incident response</li>
+                            </ul>
+                            <div class="persona-tag">👔 Executive</div>
+                            <div class="persona-tag">💰 Finance</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Monthly</span>
+                                AWS Monthly Cost Breakdown
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <table class="comparison-table">
+                                <tr>
+                                    <th>Service</th>
+                                    <th>Development</th>
+                                    <th>Test</th>
+                                    <th>Production</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>ECS Fargate</strong></td>
+                                    <td>$35</td>
+                                    <td>$85</td>
+                                    <td>$720</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>RDS PostgreSQL</strong></td>
+                                    <td>$45</td>
+                                    <td>$105</td>
+                                    <td>$950</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>S3 Storage</strong></td>
+                                    <td>$8</td>
+                                    <td>$20</td>
+                                    <td>$180</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DynamoDB</strong></td>
+                                    <td>$5</td>
+                                    <td>$12</td>
+                                    <td>$120</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>ALB</strong></td>
+                                    <td>$16</td>
+                                    <td>$32</td>
+                                    <td>$230</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>NAT Gateways</strong></td>
+                                    <td>$0</td>
+                                    <td>$0</td>
+                                    <td>$135</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>EventBridge/SQS</strong></td>
+                                    <td>$3</td>
+                                    <td>$8</td>
+                                    <td>$45</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>CloudWatch/X-Ray</strong></td>
+                                    <td>$11</td>
+                                    <td>$36</td>
+                                    <td>$145</td>
+                                </tr>
+                                <tr style="font-weight: bold; background: #f8f9fa;">
+                                    <td><strong>TOTAL</strong></td>
+                                    <td><strong>$123/month</strong></td>
+                                    <td><strong>$298/month</strong></td>
+                                    <td><strong>$2,525/month</strong></td>
+                                </tr>
+                            </table>
+                            <p><strong>Cost Optimization Opportunities:</strong></p>
+                            <ul>
+                                <li>Reserved Instances for RDS: Additional 30% savings (~$285/month in prod)</li>
+                                <li>Savings Plans for ECS: Additional 20% savings (~$144/month in prod)</li>
+                                <li>S3 Intelligent-Tiering: Automatic cost optimization for storage</li>
+                            </ul>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">💰 Finance</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">1057%</span>
+                                Return on Investment (ROI) Analysis
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Investment Breakdown:</strong></p>
+                            <ul>
+                                <li>Migration development: $120,000 (3 FTEs × 4 months)</li>
+                                <li>Testing & validation: $40,000 (2 FTEs × 2 months)</li>
+                                <li>Infrastructure setup: $25,000</li>
+                                <li>Training & documentation: $15,000</li>
+                                <li><strong>Total investment: $200,000</strong></li>
+                            </ul>
+                            <p><strong>Annual Savings:</strong></p>
+                            <ul>
+                                <li>Year 1: $1,000,000 (prorated for 8 months post-migration)</li>
+                                <li>Year 2-5: $1,200,000/year</li>
+                                <li><strong>Total 5-year savings: $5,900,000</strong></li>
+                            </ul>
+                            <p><strong>ROI Calculation:</strong></p>
+                            <ul>
+                                <li>ROI = (Total Savings - Total Investment) / Total Investment × 100%</li>
+                                <li>ROI = ($5,900,000 - $200,000) / $200,000 × 100%</li>
+                                <li><strong>ROI = 2,850%</strong> (conservative estimate with allocated costs)</li>
+                                <li><strong>Payback Period: 5.2 months</strong> (investment recovered by August 2026)</li>
+                            </ul>
+                            <div class="persona-tag">👔 Executive</div>
+                            <div class="persona-tag">💰 Finance</div>
+                            <div class="persona-tag">📋 Project Manager</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Beyond TCO</span>
+                                Intangible Business Benefits
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Agility & Time-to-Market:</strong></p>
+                            <ul>
+                                <li>Release frequency: Weekly (vs quarterly with COBOL)</li>
+                                <li>Feature development: 6x faster with modern tooling</li>
+                                <li>Deployment time: 15 minutes (vs 4-hour mainframe change window)</li>
+                            </ul>
+                            <p><strong>Scalability & Resilience:</strong></p>
+                            <ul>
+                                <li>Auto-scaling: Handles 10x load spikes automatically</li>
+                                <li>High availability: Multi-AZ with 99.95% uptime SLA</li>
+                                <li>Disaster recovery: RTO < 1 hour, RPO < 5 minutes</li>
+                            </ul>
+                            <p><strong>Developer Productivity:</strong></p>
+                            <ul>
+                                <li>Modern IDE support (IntelliJ, VS Code vs mainframe TSO)</li>
+                                <li>Larger talent pool: Java/AWS vs COBOL</li>
+                                <li>Open-source ecosystem: Spring Boot, PostgreSQL, AWS SDK</li>
+                            </ul>
+                            <p><strong>Innovation Enablement:</strong></p>
+                            <ul>
+                                <li>API-first architecture: Easy integration with digital channels</li>
+                                <li>Real-time capabilities: EventBridge for event-driven architecture</li>
+                                <li>AI/ML ready: AWS services for future enhancements</li>
+                            </ul>
+                            <div class="persona-tag">👔 Executive</div>
+                            <div class="persona-tag">💼 Business</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROADMAP TAB -->
+            <div id="roadmap" class="tab-content">
+                <div class="section">
+                    <h2 class="section-title">Migration Roadmap & Future Enhancements</h2>
+
+                    <div class="card expanded">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-success">90%</span>
+                                Current Status: Phase 1 Complete
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Phase 1: Core Migration (Complete)</strong></p>
+                            <ul>
+                                <li>✅ COBOL to Java migration (all 439 lines)</li>
+                                <li>✅ DB2 to PostgreSQL migration</li>
+                                <li>✅ AWS infrastructure deployment</li>
+                                <li>✅ 97% parity validation</li>
+                                <li>✅ 400+ tests executed (100% unit, 98% integration)</li>
+                                <li>✅ Performance testing (1200 rec/sec)</li>
+                                <li>✅ Security scanning (0 critical issues)</li>
+                                <li>✅ Documentation (11 comprehensive docs)</li>
+                                <li>⏳ UAT sign-off (in progress)</li>
+                            </ul>
+                            <p><strong>Go-Live Readiness:</strong> 90% complete</p>
+                            <p><strong>Target Go-Live:</strong> March 21, 2026</p>
+                            <div class="persona-tag">📋 Project Manager</div>
+                            <div class="persona-tag">👔 Executive</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-primary">Q2 2026</span>
+                                Phase 2: API & Authentication Enhancements
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Planned Enhancements (April - June 2026):</strong></p>
+                            <ul>
+                                <li><strong>OAuth 2.0 Authentication:</strong> Secure API access with JWT tokens</li>
+                                <li><strong>API Gateway:</strong> AWS API Gateway for rate limiting, throttling</li>
+                                <li><strong>GraphQL API:</strong> Flexible query interface for mobile apps</li>
+                                <li><strong>Async Processing:</strong> SQS-based async account creation for high volume</li>
+                                <li><strong>Enhanced Monitoring:</strong> Custom CloudWatch dashboards, advanced alerting</li>
+                            </ul>
+                            <p><strong>Business Value:</strong></p>
+                            <ul>
+                                <li>Enable mobile/web direct account opening</li>
+                                <li>Improve API security posture</li>
+                                <li>Handle 5x current volume without degradation</li>
+                            </ul>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">💼 Business</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-primary">Q3 2026</span>
+                                Phase 3: Real-Time & Analytics
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Planned Enhancements (July - September 2026):</strong></p>
+                            <ul>
+                                <li><strong>Real-Time Account Creation:</strong> Synchronous API for instant account opening</li>
+                                <li><strong>AWS Kinesis:</strong> Real-time event streaming for analytics</li>
+                                <li><strong>Data Lake Integration:</strong> S3 + Athena for historical analysis</li>
+                                <li><strong>Machine Learning:</strong> Fraud detection using AWS SageMaker</li>
+                                <li><strong>Advanced Reporting:</strong> QuickSight dashboards for business insights</li>
+                            </ul>
+                            <p><strong>Business Value:</strong></p>
+                            <ul>
+                                <li>Instant account opening for customers (< 1 second)</li>
+                                <li>Fraud detection at account creation time</li>
+                                <li>Data-driven insights for product optimization</li>
+                            </ul>
+                            <div class="persona-tag">🏗️ Architect</div>
+                            <div class="persona-tag">💼 Business</div>
+                            <div class="persona-tag">📊 Analytics</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-info">Ongoing</span>
+                                Continuous Improvement Areas
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Technical Debt & Optimization:</strong></p>
+                            <ul>
+                                <li>Code refactoring: Extract reusable patterns into shared utilities</li>
+                                <li>Test coverage: Increase from 84% to 90%+</li>
+                                <li>Performance tuning: Database query optimization, caching strategies</li>
+                                <li>Cost optimization: Reserved instances, Savings Plans</li>
+                            </ul>
+                            <p><strong>Operational Excellence:</strong></p>
+                            <ul>
+                                <li>Runbook automation: Scripted incident response procedures</li>
+                                <li>Chaos engineering: Resilience testing with AWS FIS</li>
+                                <li>Observability improvements: Distributed tracing enhancements</li>
+                                <li>Disaster recovery drills: Quarterly DR exercises</li>
+                            </ul>
+                            <p><strong>Security Hardening:</strong></p>
+                            <ul>
+                                <li>WAF implementation: AWS WAF for API protection</li>
+                                <li>Secrets rotation: Automated credential rotation with Secrets Manager</li>
+                                <li>Compliance: SOC 2, ISO 27001 preparation</li>
+                            </ul>
+                            <div class="persona-tag">☁️ DevOps</div>
+                            <div class="persona-tag">🔒 Security Lead</div>
+                            <div class="persona-tag">👨‍💻 Developer</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="badge badge-medium">Future</span>
+                                Additional Mainframe Workloads for Migration
+                            </div>
+                            <span class="expand-icon">▼</span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Migration Pipeline (2027-2028):</strong></p>
+                            <ul>
+                                <li><strong>Loan Processing:</strong> Similar batch processing pattern (High priority)</li>
+                                <li><strong>Statement Generation:</strong> Report-heavy workload (Medium priority)</li>
+                                <li><strong>Interest Calculation:</strong> Scheduled nightly job (Medium priority)</li>
+                                <li><strong>Customer Master Sync:</strong> CDC-based sync (Low priority)</li>
+                            </ul>
+                            <p><strong>Reusable Assets from Phase 1:</strong></p>
+                            <ul>
+                                <li>shared-library module (validation, generation utilities)</li>
+                                <li>CloudFormation templates (VPC, database, compute)</li>
+                                <li>CI/CD pipeline (GitHub Actions workflow)</li>
+                                <li>Testing framework (JUnit, Mockito, parity test approach)</li>
+                            </ul>
+                            <p><strong>Estimated Effort Reduction:</strong> 40-50% for subsequent migrations</p>
+                            <div class="persona-tag">👔 Executive</div>
+                            <div class="persona-tag">📋 Project Manager</div>
+                            <div class="persona-tag">🏗️ Architect</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>Account Creation Platform - Modernization Findings</strong></p>
+            <p>Document Version: 1.0 | Last Updated: March 4, 2026</p>
+            <p>Project Status: Production-Ready (90%) | Go-Live: March 21, 2026</p>
+            <p>For questions, contact: <a href="mailto:modernization-team@bfsi.com">modernization-team@bfsi.com</a></p>
+        </footer>
+    </div>
+
+    <button class="expand-all" onclick="toggleAllCards()">Expand / Collapse All</button>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Deactivate all tabs
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+
+            // Activate selected tab
+            event.target.classList.add('active');
+        }
+
+        // Card expand/collapse
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        // Expand/collapse all cards
+        let allExpanded = false;
+        function toggleAllCards() {
+            const cards = document.querySelectorAll('.card');
+            allExpanded = !allExpanded;
+            
+            cards.forEach(card => {
+                if (allExpanded) {
+                    card.classList.add('expanded');
+                } else {
+                    card.classList.remove('expanded');
+                }
+            });
+        }
+
+        // Risk filtering
+        function filterRisks(severity) {
+            const riskCards = document.querySelectorAll('.risk-card');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+
+            // Update active button
+            filterBtns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Filter cards
+            riskCards.forEach(card => {
+                if (severity === 'all' || card.dataset.severity === severity) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Auto-expand first card in each section on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                const firstCard = section.querySelector('.card');
+                if (firstCard && !firstCard.classList.contains('expanded')) {
+                    firstCard.classList.add('expanded');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

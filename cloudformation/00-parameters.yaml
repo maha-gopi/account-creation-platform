@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Parameters Stack - Account Creation Platform - Shared Parameters for all stacks'
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name (dev, test, prod)
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Default: dev
+
+  ProjectName:
+    Type: String
+    Description: Project name prefix for resources
+    Default: acct-batch
+
+  VpcCIDR:
+    Type: String
+    Description: CIDR block for VPC
+    Default: 10.1.0.0/16
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+  DatabasePassword:
+    Type: String
+    Description: Master password for RDS PostgreSQL
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: '[a-zA-Z0-9]*'
+
+  # Tags
+  CostCenter:
+    Type: String
+    Description: Cost center for billing
+    Default: CC-001-DIGITAL-BANKING
+
+  Owner:
+    Type: String
+    Description: Owner email
+    Default: platform-team@bank.com
+
+Mappings:
+  # Environment-specific CIDR blocks
+  EnvironmentConfig:
+    dev:
+      VpcCIDR: 10.1.0.0/16
+      PublicSubnet1CIDR: 10.1.1.0/24
+      PublicSubnet2CIDR: 10.1.2.0/24
+      PublicSubnet3CIDR: 10.1.3.0/24
+      PrivateSubnet1CIDR: 10.1.11.0/24
+      PrivateSubnet2CIDR: 10.1.12.0/24
+      PrivateSubnet3CIDR: 10.1.13.0/24
+      DataSubnet1CIDR: 10.1.21.0/24
+      DataSubnet2CIDR: 10.1.22.0/24
+      DataSubnet3CIDR: 10.1.23.0/24
+      RdsInstanceClass: db.t3.small
+      EcsTaskCpu: 512
+      EcsTaskMemory: 1024
+    test:
+      VpcCIDR: 10.2.0.0/16
+      PublicSubnet1CIDR: 10.2.1.0/24
+      PublicSubnet2CIDR: 10.2.2.0/24
+      PublicSubnet3CIDR: 10.2.3.0/24
+      PrivateSubnet1CIDR: 10.2.11.0/24
+      PrivateSubnet2CIDR: 10.2.12.0/24
+      PrivateSubnet3CIDR: 10.2.13.0/24
+      DataSubnet1CIDR: 10.2.21.0/24
+      DataSubnet2CIDR: 10.2.22.0/24
+      DataSubnet3CIDR: 10.2.23.0/24
+      RdsInstanceClass: db.t3.medium
+      EcsTaskCpu: 1024
+      EcsTaskMemory: 2048
+    prod:
+      VpcCIDR: 10.3.0.0/16
+      PublicSubnet1CIDR: 10.3.1.0/24
+      PublicSubnet2CIDR: 10.3.2.0/24
+      PublicSubnet3CIDR: 10.3.3.0/24
+      PrivateSubnet1CIDR: 10.3.11.0/24
+      PrivateSubnet2CIDR: 10.3.12.0/24
+      PrivateSubnet3CIDR: 10.3.13.0/24
+      DataSubnet1CIDR: 10.3.21.0/24
+      DataSubnet2CIDR: 10.3.22.0/24
+      DataSubnet3CIDR: 10.3.23.0/24
+      RdsInstanceClass: db.r6g.large
+      EcsTaskCpu: 2048
+      EcsTaskMemory: 4096
+
+Outputs:
+  Environment:
+    Description: Environment name
+    Value: !Ref Environment
+    Export:
+      Name: !Sub '${AWS::StackName}-Environment'
+
+  ProjectName:
+    Description: Project name
+    Value: !Ref ProjectName
+    Export:
+      Name: !Sub '${AWS::StackName}-ProjectName'
+
+  VpcCIDR:
+    Description: VPC CIDR block
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, VpcCIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcCIDR'
+
+  PublicSubnet1CIDR:
+    Description: Public Subnet 1 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PublicSubnet1CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1CIDR'
+
+  PublicSubnet2CIDR:
+    Description: Public Subnet 2 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PublicSubnet2CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2CIDR'
+
+  PublicSubnet3CIDR:
+    Description: Public Subnet 3 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PublicSubnet3CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet3CIDR'
+
+  PrivateSubnet1CIDR:
+    Description: Private Subnet 1 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PrivateSubnet1CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1CIDR'
+
+  PrivateSubnet2CIDR:
+    Description: Private Subnet 2 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PrivateSubnet2CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2CIDR'
+
+  PrivateSubnet3CIDR:
+    Description: Private Subnet 3 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, PrivateSubnet3CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet3CIDR'
+
+  DataSubnet1CIDR:
+    Description: Data Subnet 1 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, DataSubnet1CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet1CIDR'
+
+  DataSubnet2CIDR:
+    Description: Data Subnet 2 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, DataSubnet2CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet2CIDR'
+
+  DataSubnet3CIDR:
+    Description: Data Subnet 3 CIDR
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, DataSubnet3CIDR]
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet3CIDR'
+
+  RdsInstanceClass:
+    Description: RDS instance class
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, RdsInstanceClass]
+    Export:
+      Name: !Sub '${AWS::StackName}-RdsInstanceClass'
+
+  EcsTaskCpu:
+    Description: ECS task CPU units
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, EcsTaskCpu]
+    Export:
+      Name: !Sub '${AWS::StackName}-EcsTaskCpu'
+
+  EcsTaskMemory:
+    Description: ECS task memory (MiB)
+    Value: !FindInMap [EnvironmentConfig, !Ref Environment, EcsTaskMemory]
+    Export:
+      Name: !Sub '${AWS::StackName}-EcsTaskMemory'
+
+  CostCenter:
+    Description: Cost center tag
+    Value: !Ref CostCenter
+    Export:
+      Name: !Sub '${AWS::StackName}-CostCenter'
+
+  Owner:
+    Description: Owner tag
+    Value: !Ref Owner
+    Export:
+      Name: !Sub '${AWS::StackName}-Owner'

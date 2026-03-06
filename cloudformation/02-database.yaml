@@ -1,0 +1,318 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Database Stack - Account Creation Platform - RDS PostgreSQL with Multi-AZ'
+
+Parameters:
+  ParametersStackName:
+    Type: String
+    Description: Name of the parameters stack
+    Default: acct-batch-parameters
+
+  VpcStackName:
+    Type: String
+    Description: Name of the VPC stack
+    Default: acct-batch-vpc
+
+  MasterUsername:
+    Type: String
+    Description: Master username for RDS
+    Default: acctadmin
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+  MasterUserPassword:
+    Type: String
+    Description: Master password for RDS
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+
+  DBName:
+    Type: String
+    Description: Database name
+    Default: acctdb
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+
+Resources:
+  # DB Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub
+        - '${ProjectName}-${Environment}-db-subnet-group'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      DBSubnetGroupDescription: Subnet group for RDS PostgreSQL
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VpcStackName}-DataSubnet1Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-DataSubnet2Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-DataSubnet3Id'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-db-subnet-group'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # KMS Key for RDS Encryption
+  RDSKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for RDS PostgreSQL encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: Allow RDS to use the key
+            Effect: Allow
+            Principal:
+              Service: rds.amazonaws.com
+            Action:
+              - 'kms:Decrypt'
+              - 'kms:DescribeKey'
+              - 'kms:CreateGrant'
+            Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-rds-kms-key'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  RDSKMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - 'alias/${ProjectName}-${Environment}-rds'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      TargetKeyId: !Ref RDSKMSKey
+
+  # RDS Parameter Group
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Parameter group for PostgreSQL 15
+      Family: postgres15
+      Parameters:
+        log_statement: 'all'
+        log_min_duration_statement: '1000'
+        shared_preload_libraries: 'pg_stat_statements'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-pg-params'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # RDS PostgreSQL Instance
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub
+        - '${ProjectName}-${Environment}-postgresql'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      DBName: !Ref DBName
+      Engine: postgres
+      EngineVersion: '15.4'
+      DBInstanceClass:
+        Fn::ImportValue: !Sub '${ParametersStackName}-RdsInstanceClass'
+      AllocatedStorage: 100
+      StorageType: gp3
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt RDSKMSKey.Arn
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Sub '${VpcStackName}-RDSSecurityGroupId'
+      MultiAZ: !If
+        - IsProd
+        - true
+        - false
+      BackupRetentionPeriod: 7
+      PreferredBackupWindow: '03:00-04:00'
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      EnableCloudwatchLogsExports:
+        - postgresql
+      DBParameterGroupName: !Ref DBParameterGroup
+      EnablePerformanceInsights: true
+      PerformanceInsightsRetentionPeriod: 7
+      DeletionProtection: !If
+        - IsProd
+        - true
+        - false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-postgresql'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: CostCenter
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-CostCenter'
+
+  # Secret for Database Credentials
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-db-credentials'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Description: RDS PostgreSQL credentials
+      SecretString: !Sub
+        - |
+          {
+            "username": "${Username}",
+            "password": "${Password}",
+            "engine": "postgres",
+            "host": "${Host}",
+            "port": 5432,
+            "dbname": "${DBName}",
+            "dbInstanceIdentifier": "${DBInstanceId}"
+          }
+        - Username: !Ref MasterUsername
+          Password: !Ref MasterUserPassword
+          Host: !GetAtt DBInstance.Endpoint.Address
+          DBInstanceId: !Ref DBInstance
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-db-credentials'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # CloudWatch Alarms for RDS
+  DBCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-rds-high-cpu'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when RDS CPU exceeds 80%
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  DBConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-rds-high-connections'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when RDS connections exceed 80% of max
+      MetricName: DatabaseConnections
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+  DBFreeStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-rds-low-storage'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when RDS free storage is below 10GB
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10737418240  # 10GB in bytes
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DBInstance
+
+Conditions:
+  IsProd: !Equals
+    - Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+    - 'prod'
+
+Outputs:
+  DBInstanceId:
+    Description: RDS DB Instance ID
+    Value: !Ref DBInstance
+    Export:
+      Name: !Sub '${AWS::StackName}-DBInstanceId'
+
+  DBEndpoint:
+    Description: RDS DB Endpoint
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-DBEndpoint'
+
+  DBPort:
+    Description: RDS DB Port
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-DBPort'
+
+  DBName:
+    Description: Database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub '${AWS::StackName}-DBName'
+
+  DBSecretArn:
+    Description: ARN of the secret containing DB credentials
+    Value: !Ref DBSecret
+    Export:
+      Name: !Sub '${AWS::StackName}-DBSecretArn'

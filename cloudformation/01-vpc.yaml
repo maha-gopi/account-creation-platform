@@ -1,0 +1,649 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'VPC Stack - Account Creation Platform - 3-tier VPC with public, private, and data subnets'
+
+Parameters:
+  ParametersStackName:
+    Type: String
+    Description: Name of the parameters stack
+    Default: acct-batch-parameters
+
+Resources:
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-VpcCIDR'
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-vpc'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: CostCenter
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-CostCenter'
+        - Key: Owner
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Owner'
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-igw'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # Public Subnets (for ALB, NAT Gateway)
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PublicSubnet1CIDR'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-public-subnet-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Public
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PublicSubnet2CIDR'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-public-subnet-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Public
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PublicSubnet3CIDR'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-public-subnet-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Public
+
+  # Private Subnets (for ECS tasks)
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PrivateSubnet1CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-subnet-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Private
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PrivateSubnet2CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-subnet-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Private
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-PrivateSubnet3CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-subnet-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Private
+
+  # Data Subnets (for RDS, DynamoDB VPC endpoints)
+  DataSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-DataSubnet1CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-data-subnet-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Data
+
+  DataSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-DataSubnet2CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-data-subnet-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Data
+
+  DataSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [2, !GetAZs '']
+      CidrBlock:
+        Fn::ImportValue: !Sub '${ParametersStackName}-DataSubnet3CIDR'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-data-subnet-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Tier
+          Value: Data
+
+  # NAT Gateways (one per AZ for high availability)
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-eip-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-eip-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  NatGateway3EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-eip-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-gw-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-gw-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  NatGateway3:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway3EIP.AllocationId
+      SubnetId: !Ref PublicSubnet3
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-nat-gw-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-public-rt'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet3
+
+  # Private Route Tables (one per AZ)
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-rt-1'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-rt-2'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-private-rt-3'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  DefaultPrivateRoute3:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway3
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet3
+
+  # Data Route Tables (no internet access)
+  DataRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-data-rt'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  DataSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref DataRouteTable
+      SubnetId: !Ref DataSubnet1
+
+  DataSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref DataRouteTable
+      SubnetId: !Ref DataSubnet2
+
+  DataSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref DataRouteTable
+      SubnetId: !Ref DataSubnet3
+
+  # VPC Endpoints (for S3, DynamoDB, Secrets Manager)
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      RouteTableIds:
+        - !Ref PrivateRouteTable1
+        - !Ref PrivateRouteTable2
+        - !Ref PrivateRouteTable3
+        - !Ref DataRouteTable
+
+  DynamoDBVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      RouteTableIds:
+        - !Ref PrivateRouteTable1
+        - !Ref PrivateRouteTable2
+        - !Ref PrivateRouteTable3
+
+  # Security Groups
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub
+        - '${ProjectName}-${Environment}-alb-sg'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-alb-sg'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub
+        - '${ProjectName}-${Environment}-ecs-sg'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8081
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Allow traffic from ALB
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-ecs-sg'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub
+        - '${ProjectName}-${Environment}-rds-sg'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+          Description: Allow PostgreSQL from ECS tasks
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-rds-sg'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcId'
+
+  PublicSubnet1Id:
+    Description: Public Subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1Id'
+
+  PublicSubnet2Id:
+    Description: Public Subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2Id'
+
+  PublicSubnet3Id:
+    Description: Public Subnet 3 ID
+    Value: !Ref PublicSubnet3
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet3Id'
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1Id'
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2Id'
+
+  PrivateSubnet3Id:
+    Description: Private Subnet 3 ID
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet3Id'
+
+  DataSubnet1Id:
+    Description: Data Subnet 1 ID
+    Value: !Ref DataSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet1Id'
+
+  DataSubnet2Id:
+    Description: Data Subnet 2 ID
+    Value: !Ref DataSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet2Id'
+
+  DataSubnet3Id:
+    Description: Data Subnet 3 ID
+    Value: !Ref DataSubnet3
+    Export:
+      Name: !Sub '${AWS::StackName}-DataSubnet3Id'
+
+  ALBSecurityGroupId:
+    Description: ALB Security Group ID
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBSecurityGroupId'
+
+  ECSSecurityGroupId:
+    Description: ECS Security Group ID
+    Value: !Ref ECSSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ECSSecurityGroupId'
+
+  RDSSecurityGroupId:
+    Description: RDS Security Group ID
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-RDSSecurityGroupId'

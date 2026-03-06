@@ -1,0 +1,598 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Compute Stack - Account Creation Platform - ECS Fargate/EC2 and Application Load Balancers'
+
+Parameters:
+  ParametersStackName:
+    Type: String
+    Description: Name of the parameters stack
+    Default: acct-batch-parameters
+
+  VpcStackName:
+    Type: String
+    Description: Name of the VPC stack
+    Default: acct-batch-vpc
+
+  DatabaseStackName:
+    Type: String
+    Description: Name of the database stack
+    Default: acct-batch-database
+
+  StorageStackName:
+    Type: String
+    Description: Name of the storage stack
+    Default: acct-batch-storage
+
+  DockerImageBatch:
+    Type: String
+    Description: Docker image for batch API
+    Default: 123456789012.dkr.ecr.us-east-1.amazonaws.com/acct-batch-business-process-api:latest
+
+  DockerImageCoreApi:
+    Type: String
+    Description: Docker image for core API
+    Default: 123456789012.dkr.ecr.us-east-1.amazonaws.com/acct-batch-core-account-api:latest
+
+Resources:
+  # ECS Cluster for Batch Job (Fargate)
+  ECSClusterBatch:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub
+        - '${ProjectName}-${Environment}-batch-cluster'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-batch-cluster'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # ECS Cluster for Core API (EC2)
+  ECSClusterCoreApi:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub
+        - '${ProjectName}-${Environment}-coreapi-cluster'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-coreapi-cluster'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # CloudWatch Log Groups
+  BatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - '/ecs/${ProjectName}-${Environment}-batch'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      RetentionInDays: 30
+
+  CoreApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - '/ecs/${ProjectName}-${Environment}-coreapi'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      RetentionInDays: 30
+
+  # IAM Role for ECS Task Execution
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - '${ProjectName}-${Environment}-ecs-task-execution-role'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !GetAtt BatchLogGroup.Arn
+                  - !GetAtt CoreApiLogGroup.Arn
+
+  # IAM Role for ECS Task (Application)
+  ECSTaskRoleBatch:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - '${ProjectName}-${Environment}-batch-task-role'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - Fn::ImportValue: !Sub '${StorageStackName}-InputFilesBucketArn'
+                  - !Sub
+                    - '${BucketArn}/*'
+                    - BucketArn:
+                        Fn::ImportValue: !Sub '${StorageStackName}-InputFilesBucketArn'
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - Fn::ImportValue: !Sub '${StorageStackName}-ReportsBucketArn'
+                  - !Sub
+                    - '${BucketArn}/*'
+                    - BucketArn:
+                        Fn::ImportValue: !Sub '${StorageStackName}-ReportsBucketArn'
+                  - Fn::ImportValue: !Sub '${StorageStackName}-ArchiveBucketArn'
+                  - !Sub
+                    - '${BucketArn}/*'
+                    - BucketArn:
+                        Fn::ImportValue: !Sub '${StorageStackName}-ArchiveBucketArn'
+        - PolicyName: EventBridgeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource: '*'
+        - PolicyName: XRayAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                Resource: '*'
+
+  ECSTaskRoleCoreApi:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub
+        - '${ProjectName}-${Environment}-coreapi-task-role'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:Query'
+                  - 'dynamodb:UpdateItem'
+                Resource:
+                  - Fn::ImportValue: !Sub '${StorageStackName}-IdempotencyTableArn'
+        - PolicyName: EventBridgeAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource: '*'
+        - PolicyName: XRayAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                Resource: '*'
+
+  # ECS Task Definition - Batch Job
+  BatchTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub
+        - '${ProjectName}-${Environment}-batch'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu:
+        Fn::ImportValue: !Sub '${ParametersStackName}-EcsTaskCpu'
+      Memory:
+        Fn::ImportValue: !Sub '${ParametersStackName}-EcsTaskMemory'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRoleBatch.Arn
+      ContainerDefinitions:
+        - Name: batch-api
+          Image: !Ref DockerImageBatch
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+          Environment:
+            - Name: SPRING_PROFILES_ACTIVE
+              Value:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_INPUT_BUCKET
+              Value:
+                Fn::ImportValue: !Sub '${StorageStackName}-InputFilesBucketName'
+            - Name: S3_REPORTS_BUCKET
+              Value:
+                Fn::ImportValue: !Sub '${StorageStackName}-ReportsBucketName'
+            - Name: CORE_API_URL
+              Value: !Sub 'http://${CoreApiALB.DNSName}'
+          Secrets:
+            - Name: DB_HOST
+              ValueFrom: !Sub
+                - '${SecretArn}:host::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+            - Name: DB_USERNAME
+              ValueFrom: !Sub
+                - '${SecretArn}:username::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub
+                - '${SecretArn}:password::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref BatchLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -f http://localhost:8080/actuator/health || exit 1
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+
+  # ECS Task Definition - Core API
+  CoreApiTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub
+        - '${ProjectName}-${Environment}-coreapi'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu:
+        Fn::ImportValue: !Sub '${ParametersStackName}-EcsTaskCpu'
+      Memory:
+        Fn::ImportValue: !Sub '${ParametersStackName}-EcsTaskMemory'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRoleCoreApi.Arn
+      ContainerDefinitions:
+        - Name: coreapi
+          Image: !Ref DockerImageCoreApi
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8081
+              Protocol: tcp
+          Environment:
+            - Name: SPRING_PROFILES_ACTIVE
+              Value:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: DYNAMODB_TABLE_NAME
+              Value:
+                Fn::ImportValue: !Sub '${StorageStackName}-IdempotencyTableName'
+          Secrets:
+            - Name: DB_HOST
+              ValueFrom: !Sub
+                - '${SecretArn}:host::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+            - Name: DB_USERNAME
+              ValueFrom: !Sub
+                - '${SecretArn}:username::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub
+                - '${SecretArn}:password::'
+                - SecretArn:
+                    Fn::ImportValue: !Sub '${DatabaseStackName}-DBSecretArn'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CoreApiLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command:
+              - CMD-SHELL
+              - curl -f http://localhost:8081/actuator/health || exit 1
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+
+  # Application Load Balancer - Batch API
+  BatchALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-batch-alb'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Type: application
+      Scheme: internal
+      IpAddressType: ipv4
+      Subnets:
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet1Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet2Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet3Id'
+      SecurityGroups:
+        - Fn::ImportValue: !Sub '${VpcStackName}-ALBSecurityGroupId'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-batch-alb'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # Application Load Balancer - Core API
+  CoreApiALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-coreapi-alb'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Type: application
+      Scheme: internal
+      IpAddressType: ipv4
+      Subnets:
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet1Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet2Id'
+        - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet3Id'
+      SecurityGroups:
+        - Fn::ImportValue: !Sub '${VpcStackName}-ALBSecurityGroupId'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-coreapi-alb'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # Target Groups
+  BatchTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-batch-tg'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Port: 8080
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub '${VpcStackName}-VpcId'
+      HealthCheckEnabled: true
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+
+  CoreApiTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-coreapi-tg'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Port: 8081
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub '${VpcStackName}-VpcId'
+      HealthCheckEnabled: true
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+
+  # Listeners
+  BatchALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref BatchALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref BatchTargetGroup
+
+  CoreApiALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref CoreApiALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref CoreApiTargetGroup
+
+  # ECS Service - Core API (always running)
+  CoreApiECSService:
+    Type: AWS::ECS::Service
+    DependsOn: CoreApiALBListener
+    Properties:
+      ServiceName: !Sub
+        - '${ProjectName}-${Environment}-coreapi-service'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Cluster: !Ref ECSClusterCoreApi
+      TaskDefinition: !Ref CoreApiTaskDefinition
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          Subnets:
+            - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet1Id'
+            - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet2Id'
+            - Fn::ImportValue: !Sub '${VpcStackName}-PrivateSubnet3Id'
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${VpcStackName}-ECSSecurityGroupId'
+      LoadBalancers:
+        - ContainerName: coreapi
+          ContainerPort: 8081
+          TargetGroupArn: !Ref CoreApiTargetGroup
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-coreapi-service'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+Outputs:
+  ECSClusterBatchName:
+    Description: ECS Cluster name for batch jobs
+    Value: !Ref ECSClusterBatch
+    Export:
+      Name: !Sub '${AWS::StackName}-ECSClusterBatchName'
+
+  ECSClusterCoreApiName:
+    Description: ECS Cluster name for core API
+    Value: !Ref ECSClusterCoreApi
+    Export:
+      Name: !Sub '${AWS::StackName}-ECSClusterCoreApiName'
+
+  BatchTaskDefinitionArn:
+    Description: Batch task definition ARN
+    Value: !Ref BatchTaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-BatchTaskDefinitionArn'
+
+  CoreApiTaskDefinitionArn:
+    Description: Core API task definition ARN
+    Value: !Ref CoreApiTaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-CoreApiTaskDefinitionArn'
+
+  BatchALBDNSName:
+    Description: Batch ALB DNS name
+    Value: !GetAtt BatchALB.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-BatchALBDNSName'
+
+  CoreApiALBDNSName:
+    Description: Core API ALB DNS name
+    Value: !GetAtt CoreApiALB.DNSName
+    Export:
+      Name: !Sub '${AWS::StackName}-CoreApiALBDNSName'

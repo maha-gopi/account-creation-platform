@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: core-account-api
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:acct_db}
+    username: ${DB_USERNAME:acct_user}
+    password: ${DB_PASSWORD:changeme}
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: acct_owner
+  
+  flyway:
+    enabled: true
+    schemas: acct_owner
+    locations: classpath:db/migration
+  
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Account number generation
+account:
+  generation:
+    lcg-seed: 12345
+    max-collision-retries: 10
+
+# Transaction configuration
+transaction:
+  isolation-level: SERIALIZABLE
+  timeout: 30
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      simple:
+        enabled: true
+
+logging:
+  level:
+    com.bfsi.acct: INFO
+    org.springframework.transaction: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -1,0 +1,395 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Storage Stack - Account Creation Platform - S3 buckets and DynamoDB'
+
+Parameters:
+  ParametersStackName:
+    Type: String
+    Description: Name of the parameters stack
+    Default: acct-batch-parameters
+
+Resources:
+  # KMS Key for S3 Encryption
+  S3KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for S3 bucket encryption
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: Allow S3 to use the key
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - 'kms:Decrypt'
+              - 'kms:GenerateDataKey'
+            Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-s3-kms-key'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  S3KMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - 'alias/${ProjectName}-${Environment}-s3'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      TargetKeyId: !Ref S3KMSKey
+
+  # S3 Bucket - Input Files
+  InputFilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - '${ProjectName}-${Environment}-input-files-${AWS::AccountId}'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt S3KMSKey.Arn
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 90
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-input-files'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: CostCenter
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-CostCenter'
+
+  # S3 Bucket - Reports
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - '${ProjectName}-${Environment}-reports-${AWS::AccountId}'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt S3KMSKey.Arn
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToIA
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 180
+                StorageClass: GLACIER
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-reports'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # S3 Bucket - Archive
+  ArchiveBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - '${ProjectName}-${Environment}-archive-${AWS::AccountId}'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt S3KMSKey.Arn
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToGlacierImmediately
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 1
+                StorageClass: GLACIER
+          - Id: DeleteAfter7Years
+            Status: Enabled
+            ExpirationInDays: 2555  # 7 years
+      ObjectLockEnabled: !If
+        - IsProd
+        - true
+        - false
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-archive'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Compliance
+          Value: '7-year retention'
+
+  # S3 Bucket - Configuration
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - '${ProjectName}-${Environment}-config-${AWS::AccountId}'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt S3KMSKey.Arn
+            BucketKeyEnabled: true
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-config'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # DynamoDB Table - Idempotency Cache
+  IdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub
+        - '${ProjectName}-${Environment}-idempotency'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !Ref S3KMSKey
+      TimeToLiveSpecification:
+        Enabled: true
+        AttributeName: ttl
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-idempotency'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: CostCenter
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-CostCenter'
+
+  # CloudWatch Alarms for DynamoDB
+  DynamoDBReadThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-dynamodb-read-throttle'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when DynamoDB read requests are throttled
+      MetricName: UserErrors
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: !Ref IdempotencyTable
+
+  DynamoDBWriteThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-dynamodb-write-throttle'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when DynamoDB write requests are throttled
+      MetricName: SystemErrors
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: !Ref IdempotencyTable
+
+Conditions:
+  IsProd: !Equals
+    - Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+    - 'prod'
+
+Outputs:
+  InputFilesBucketName:
+    Description: Input files S3 bucket name
+    Value: !Ref InputFilesBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-InputFilesBucketName'
+
+  InputFilesBucketArn:
+    Description: Input files S3 bucket ARN
+    Value: !GetAtt InputFilesBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-InputFilesBucketArn'
+
+  ReportsBucketName:
+    Description: Reports S3 bucket name
+    Value: !Ref ReportsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ReportsBucketName'
+
+  ReportsBucketArn:
+    Description: Reports S3 bucket ARN
+    Value: !GetAtt ReportsBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ReportsBucketArn'
+
+  ArchiveBucketName:
+    Description: Archive S3 bucket name
+    Value: !Ref ArchiveBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ArchiveBucketName'
+
+  ArchiveBucketArn:
+    Description: Archive S3 bucket ARN
+    Value: !GetAtt ArchiveBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ArchiveBucketArn'
+
+  ConfigBucketName:
+    Description: Config S3 bucket name
+    Value: !Ref ConfigBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigBucketName'
+
+  ConfigBucketArn:
+    Description: Config S3 bucket ARN
+    Value: !GetAtt ConfigBucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ConfigBucketArn'
+
+  IdempotencyTableName:
+    Description: DynamoDB idempotency table name
+    Value: !Ref IdempotencyTable
+    Export:
+      Name: !Sub '${AWS::StackName}-IdempotencyTableName'
+
+  IdempotencyTableArn:
+    Description: DynamoDB idempotency table ARN
+    Value: !GetAtt IdempotencyTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-IdempotencyTableArn'
+
+  IdempotencyTableStreamArn:
+    Description: DynamoDB idempotency table stream ARN
+    Value: !GetAtt IdempotencyTable.StreamArn
+    Export:
+      Name: !Sub '${AWS::StackName}-IdempotencyTableStreamArn'

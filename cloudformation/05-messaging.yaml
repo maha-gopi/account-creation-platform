@@ -1,0 +1,275 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Messaging Stack - Account Creation Platform - EventBridge and SQS'
+
+Parameters:
+  ParametersStackName:
+    Type: String
+    Description: Name of the parameters stack
+    Default: acct-batch-parameters
+
+Resources:
+  # EventBridge Custom Event Bus
+  AccountCreationEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-event-bus'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-event-bus'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # SQS Queue - Account Events
+  AccountEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - '${ProjectName}-${Environment}-account-events-queue'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600  # 14 days
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AccountEventsDLQ.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: alias/aws/sqs
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-account-events-queue'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+        - Key: Environment
+          Value:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # SQS Dead Letter Queue
+  AccountEventsDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - '${ProjectName}-${Environment}-account-events-dlq'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      MessageRetentionPeriod: 1209600  # 14 days
+      KmsMasterKeyId: alias/aws/sqs
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-account-events-dlq'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # SQS Queue Policy
+  AccountEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AccountEventsQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - 'sqs:SendMessage'
+            Resource: !GetAtt AccountEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                'aws:SourceArn': !GetAtt AccountCreatedEventRule.Arn
+
+  # EventBridge Rule - Account Created
+  AccountCreatedEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub
+        - '${ProjectName}-${Environment}-account-created-rule'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Description: Route account created events to SQS
+      EventBusName: !Ref AccountCreationEventBus
+      EventPattern:
+        source:
+          - com.bfsi.acct
+        detail-type:
+          - ACCOUNT_CREATED
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt AccountEventsQueue.Arn
+          Id: AccountEventsQueueTarget
+          RetryPolicy:
+            MaximumRetryAttempts: 2
+            MaximumEventAge: 3600
+
+  # EventBridge Archive
+  AccountEventsArchive:
+    Type: AWS::Events::Archive
+    Properties:
+      ArchiveName: !Sub
+        - '${ProjectName}-${Environment}-account-events-archive'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      Description: Archive of all account creation events
+      EventSourceArn: !GetAtt AccountCreationEventBus.Arn
+      RetentionDays: 30
+
+  # SNS Topic for Alarms
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub
+        - '${ProjectName}-${Environment}-alerts'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      DisplayName: Account Creation Platform Alerts
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${ProjectName}-${Environment}-alerts'
+            - ProjectName:
+                Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+              Environment:
+                Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+
+  # SNS Subscription (Email - to be updated with actual email)
+  AlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref AlertTopic
+      Endpoint: platform-team@bank.com
+
+  # CloudWatch Alarms
+  DLQMessagesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-dlq-messages'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when messages are in DLQ
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AccountEventsDLQ.QueueName
+      AlarmActions:
+        - !Ref AlertTopic
+
+  QueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-queue-depth'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when queue depth exceeds 1000 messages
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt AccountEventsQueue.QueueName
+      AlarmActions:
+        - !Ref AlertTopic
+
+  EventBridgeFailedInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - '${ProjectName}-${Environment}-eventbridge-failures'
+        - ProjectName:
+            Fn::ImportValue: !Sub '${ParametersStackName}-ProjectName'
+          Environment:
+            Fn::ImportValue: !Sub '${ParametersStackName}-Environment'
+      AlarmDescription: Alert when EventBridge invocations fail
+      MetricName: FailedInvocations
+      Namespace: AWS/Events
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: RuleName
+          Value: !Ref AccountCreatedEventRule
+      AlarmActions:
+        - !Ref AlertTopic
+
+Outputs:
+  EventBusName:
+    Description: EventBridge event bus name
+    Value: !Ref AccountCreationEventBus
+    Export:
+      Name: !Sub '${AWS::StackName}-EventBusName'
+
+  EventBusArn:
+    Description: EventBridge event bus ARN
+    Value: !GetAtt AccountCreationEventBus.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EventBusArn'
+
+  AccountEventsQueueUrl:
+    Description: SQS queue URL for account events
+    Value: !Ref AccountEventsQueue
+    Export:
+      Name: !Sub '${AWS::StackName}-AccountEventsQueueUrl'
+
+  AccountEventsQueueArn:
+    Description: SQS queue ARN for account events
+    Value: !GetAtt AccountEventsQueue.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AccountEventsQueueArn'
+
+  AccountEventsDLQUrl:
+    Description: SQS DLQ URL for account events
+    Value: !Ref AccountEventsDLQ
+    Export:
+      Name: !Sub '${AWS::StackName}-AccountEventsDLQUrl'
+
+  AlertTopicArn:
+    Description: SNS topic ARN for alerts
+    Value: !Ref AlertTopic
+    Export:
+      Name: !Sub '${AWS::StackName}-AlertTopicArn'

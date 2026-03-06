@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: acct-postgres
+    environment:
+      POSTGRES_DB: acct_db
+      POSTGRES_USER: acct_user
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - acct-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acct_user -d acct_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: acct-localstack
+    environment:
+      SERVICES: s3,sqs,dynamodb,eventbridge
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"  # LocalStack gateway
+      - "4571:4571"  # S3
+    volumes:
+      - localstack-data:/tmp/localstack
+      - ./localstack-init:/docker-entrypoint-initaws.d
+    networks:
+      - acct-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: acct-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@acct.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - acct-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-data:
+  localstack-data:
+
+networks:
+  acct-network:
+    driver: bridge
