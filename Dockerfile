@@ -2,14 +2,8 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /app
 
-# Copy the root pom.xml
-COPY ./pom.xml .
-
-# Copy the shared library module
-COPY ./shared-library ./shared-library
-
-# Copy the core account API module
-COPY ./core-account-api ./core-account-api
+# Copy the entire project source
+COPY . .
 
 # Build the core-account-api and its dependencies (shared-library)
 RUN mvn clean package -pl core-account-api -am -DskipTests
